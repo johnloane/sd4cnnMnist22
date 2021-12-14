@@ -13,6 +13,8 @@ import cv2
 from keras.layers.convolutional import Conv2D
 from keras.layers.convolutional import MaxPooling2D
 from keras.layers import Flatten
+from keras.layers import Dropout
+from keras.models import Model
 
 
 def letNet_model():
@@ -27,6 +29,7 @@ def letNet_model():
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Flatten())
     model.add(Dense(500, activation='relu'))
+    model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='softmax'))
     model.compile(Adam(learning_rate = 0.01), loss='categorical_crossentropy', metrics=['accuracy'])
     return model
@@ -59,41 +62,63 @@ X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
 model = letNet_model()
 print(model.summary())
 
+h = model.fit(X_train, y_train, epochs=10, validation_split=0.1, batch_size=400, verbose=1, shuffle=1)
+plt.plot(h.history['accuracy'])
+plt.plot(h.history['val_accuracy'])
+plt.legend(['accuracy', ['val_accuracy']])
+plt.title('Accuracy')
+plt.xlabel('epoch')
+plt.show()
+
+url = 'https://colah.github.io/posts/2014-10-Visualizing-MNIST/img/mnist_pca/MNIST-p1815-4.png'
+response = requests.get(url, stream=True)
+img = Image.open(response.raw)
+img.show()
+
+img_array = np.asarray(img)
+print(img_array.shape)
+resized = cv2.resize(img_array, (28, 28))
+gray_scale = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+print(gray_scale.shape)
+
+plt.imshow(gray_scale, cmap=plt.get_cmap("gray"))
+plt.show()
+
+image = cv2.bitwise_not(gray_scale)
+image = image/255
+print(image.shape)
+image = image.reshape(1, 28, 28, 1)
+prediction = np.argmax(model.predict(image), axis=1)
+print("Predicted digit: ", str(prediction))
+
+score = model.evaluate(X_test, y_test, verbose=1)
+print("Test score: ", score[0])
+print("Test accuracy: ", score[1])
+
+layer1 = Model(inputs=model.layers[0].input, outputs=model.layers[0].output)
+layer2 = Model(inputs=model.layers[0].input, outputs=model.layers[2].output)
+
+visual_layer1 = layer1.predict(image)
+visual_layer2 = layer2.predict(image)
+
+print(visual_layer1.shape)
+print(visual_layer2.shape)
+
+plt.figure(figsize=(10, 6))
+for i in range(30):
+    plt.subplot(6, 5, i+1)
+    plt.imshow(visual_layer1[0, :, :, i], cmap=plt.get_cmap('jet'))
+    plt.axis('off')
+plt.show()
+
+plt.figure(figsize=(10, 6))
+for i in range(15):
+    plt.subplot(3, 5, i+1)
+    plt.imshow(visual_layer2[0, :, :, i], cmap=plt.get_cmap('jet'))
+    plt.axis('off')
+plt.show()
 
 
-
-# print(model.summary())
-# h = model.fit(X_train, y_train, validation_split=0.1, epochs=10, batch_size=200, verbose=1, shuffle=True)
-# plt.plot(h.history['loss'])
-# plt.plot(h.history['val_loss'])
-# plt.legend(['loss', ['val_loss']])
-# plt.title('Loss')
-# plt.xlabel('epoch')
-# plt.show()
-#
-# score = model.evaluate(X_test, y_test, verbose=1)
-# print("Test score: ", score[0])
-# print("Test accuracy: ", score[1])
-#
-# url = 'https://colah.github.io/posts/2014-10-Visualizing-MNIST/img/mnist_pca/MNIST-p1815-4.png'
-# response = requests.get(url, stream=True)
-# img = Image.open(response.raw)
-# img.show()
-#
-# img_array = np.asarray(img)
-# print(img_array.shape)
-# resized = cv2.resize(img_array, (28, 28))
-# gray_scale = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-# print(gray_scale.shape)
-#
-# plt.imshow(gray_scale, cmap=plt.get_cmap("gray"))
-# plt.show()
-#
-# image = cv2.bitwise_not(gray_scale)
-# image = image/255
-# image = image.reshape(1, 784)
-# prediction = np.argmax(model.predict(image), axis=1)
-# print("Predicted digit: ", str(prediction))
 
 
 
